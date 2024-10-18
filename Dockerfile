@@ -1,5 +1,5 @@
 # Use the official Rust image as a parent image
-FROM rust:1.70 AS builder
+FROM rust:1.81 AS builder
 
 # Set the working directory in the container
 WORKDIR /usr/src/uniqlo_scraper
@@ -39,3 +39,6 @@ USER myuser
 
 # Run the start script when the container launches
 CMD ["./start.sh"]
+
+# Expose the port the app runs on
+EXPOSE 8080

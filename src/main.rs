@@ -1,36 +1,48 @@
+use actix_web::{get, web, App, HttpServer, Responder};
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::time::Duration;
 use thirtyfour::prelude::*;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 struct SaleItem {
     name: String,
     price: String,
     original_price: String,
 }
 
-#[tokio::main]
-async fn main() -> WebDriverResult<()> {
+#[get("/trousers")]
+async fn get_trousers() -> impl Responder {
+    match scrape_uniqlo().await {
+        Ok(sale_items) => {
+            let json_output = json!({ "sale_items": sale_items });
+            web::Json(json_output)
+        }
+        Err(e) => {
+            eprintln!("Error scraping Uniqlo: {:?}", e);
+            let json_output = json!({ "error": "Failed to scrape data" });
+            web::Json(json_output)
+        }
+    }
+}
+
+async fn scrape_uniqlo() -> WebDriverResult<Vec<SaleItem>> {
     let mut caps = DesiredCapabilities::chrome();
     caps.add_chrome_arg("--no-sandbox")?;
     caps.add_chrome_arg("--disable-dev-shm-usage")?;
     caps.add_chrome_arg("--disable-gpu")?;
     caps.add_chrome_arg("--headless")?;
 
-    // Update the WebDriver URL to use the correct address within the container
     let driver = WebDriver::new("http://localhost:4444", caps).await?;
 
     let url = "https://www.uniqlo.com/uk/en/men/bottoms";
     driver.goto(url).await?;
 
-    // Wait for the page to load
     driver
         .set_implicit_wait_timeout(Duration::from_secs(10))
         .await?;
 
-    // Wait 5 seconds for the page to load
     tokio::time::sleep(Duration::from_secs(1)).await;
 
     let body = driver.source().await?;
@@ -42,29 +54,26 @@ async fn main() -> WebDriverResult<()> {
     let product_tiles: Vec<_> = document.select(&product_tile_selector).collect();
     println!("Found {} product tiles", product_tiles.len());
 
-    if product_tiles.is_empty() {
+    let sale_items: Vec<SaleItem> = if product_tiles.is_empty() {
         println!("No product tiles found. The selector might be incorrect.");
         println!("First 1000 characters of the HTML:");
         println!("{}", &body[..1000.min(body.len())]);
+        vec![]
     } else {
-        let sale_items: Vec<SaleItem> = product_tiles
+        product_tiles
             .iter()
             .filter(|tile| {
                 let text = tile.text().collect::<String>().to_lowercase();
                 text.contains("sale")
             })
             .filter_map(|tile| extract_product_info(tile))
-            .collect();
+            .collect()
+    };
 
-        println!("Found {} items on sale", sale_items.len());
-
-        // Serialize the sale items to JSON
-        let json_output = json!({ "sale_items": sale_items });
-        println!("{}", serde_json::to_string_pretty(&json_output).unwrap());
-    }
+    println!("Found {} items on sale", sale_items.len());
 
     driver.quit().await?;
-    Ok(())
+    Ok(sale_items)
 }
 
 fn extract_product_info(product_tile: &scraper::ElementRef) -> Option<SaleItem> {
@@ -101,4 +110,12 @@ fn extract_product_info(product_tile: &scraper::ElementRef) -> Option<SaleItem> 
         price,
         original_price,
     })
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| App::new().service(get_trousers))
+        .bind(("0.0.0.0", 8080))?
+        .run()
+        .await
 }
