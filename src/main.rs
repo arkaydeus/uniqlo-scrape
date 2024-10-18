@@ -114,8 +114,12 @@ fn extract_product_info(product_tile: &scraper::ElementRef) -> Option<SaleItem> 
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let port = std::env::var("PORT").unwrap_or("8080".to_string());
+
+    println!("Starting server on port {}", port);
+
     HttpServer::new(|| App::new().service(get_trousers))
-        .bind(("0.0.0.0", 8080))?
+        .bind(("0.0.0.0", port.parse().unwrap()))?
         .run()
         .await
 }

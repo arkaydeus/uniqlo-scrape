@@ -10,8 +10,8 @@ COPY . .
 # Build the application
 RUN cargo build --release
 
-# Use a more recent Debian base image
-FROM debian:bullseye-slim
+# Use a more recent Debian base image (Bookworm)
+FROM debian:bookworm-slim
 
 # Install necessary dependencies including chromium-driver
 RUN apt-get update && apt-get install -y \
@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up the working directory
-WORKDIR /usr/src/uniqlo_scraper
+WORKDIR /app
 
 # Copy the built executable from the builder stage
 COPY --from=builder /usr/src/uniqlo_scraper/target/release/uniqlo_scraper .
