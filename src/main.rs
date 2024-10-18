@@ -43,7 +43,7 @@ async fn scrape_uniqlo() -> WebDriverResult<Vec<SaleItem>> {
         .set_implicit_wait_timeout(Duration::from_secs(10))
         .await?;
 
-    tokio::time::sleep(Duration::from_secs(3)).await;
+    tokio::time::sleep(Duration::from_secs(5)).await;
 
     let body = driver.source().await?;
     let document = Html::parse_document(&body);
