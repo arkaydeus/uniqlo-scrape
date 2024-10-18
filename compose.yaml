@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   uniqlo-scraper:
     image: index.docker.io/arkaydeus/uniqlo_scraper:latest

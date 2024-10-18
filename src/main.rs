@@ -43,7 +43,7 @@ async fn scrape_uniqlo() -> WebDriverResult<Vec<SaleItem>> {
         .set_implicit_wait_timeout(Duration::from_secs(10))
         .await?;
 
-    tokio::time::sleep(Duration::from_secs(1)).await;
+    tokio::time::sleep(Duration::from_secs(3)).await;
 
     let body = driver.source().await?;
     let document = Html::parse_document(&body);
@@ -57,7 +57,7 @@ async fn scrape_uniqlo() -> WebDriverResult<Vec<SaleItem>> {
     let sale_items: Vec<SaleItem> = if product_tiles.is_empty() {
         println!("No product tiles found. The selector might be incorrect.");
         println!("First 1000 characters of the HTML:");
-        println!("{}", &body[..1000.min(body.len())]);
+        println!("{}", &body[..3000.min(body.len())]);
         vec![]
     } else {
         product_tiles
