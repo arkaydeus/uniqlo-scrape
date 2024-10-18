@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  uniqlo-scraper:
+    image: index.docker.io/arkaydeus/uniqlo_scraper:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    volumes:
+      - /dev/shm:/dev/shm
+    restart: unless-stopped
