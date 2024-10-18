@@ -1,7 +1,15 @@
 use scraper::{Html, Selector};
-// use serde_json::json;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::time::Duration;
 use thirtyfour::prelude::*;
+
+#[derive(Serialize, Deserialize)]
+struct SaleItem {
+    name: String,
+    price: String,
+    original_price: String,
+}
 
 #[tokio::main]
 async fn main() -> WebDriverResult<()> {
@@ -39,48 +47,58 @@ async fn main() -> WebDriverResult<()> {
         println!("First 1000 characters of the HTML:");
         println!("{}", &body[..1000.min(body.len())]);
     } else {
-        let sale_items: Vec<_> = product_tiles
+        let sale_items: Vec<SaleItem> = product_tiles
             .iter()
             .filter(|tile| {
                 let text = tile.text().collect::<String>().to_lowercase();
                 text.contains("sale")
             })
+            .filter_map(|tile| extract_product_info(tile))
             .collect();
 
         println!("Found {} items on sale", sale_items.len());
 
-        for product_tile in sale_items.iter() {
-            // for (index, product_tile) in sale_items.iter().enumerate() {
-            // println!("Sale Item #{}", index + 1);
-            print_product_info(product_tile);
-            println!();
-        }
+        // Serialize the sale items to JSON
+        let json_output = json!({ "sale_items": sale_items });
+        println!("{}", serde_json::to_string_pretty(&json_output).unwrap());
     }
 
     driver.quit().await?;
     Ok(())
 }
 
-fn print_product_info(product_tile: &scraper::ElementRef) {
-    // let name_selector = Selector::parse(".fr-ec-product-tile__product-name").unwrap();
-
+fn extract_product_info(product_tile: &scraper::ElementRef) -> Option<SaleItem> {
     let title_selector = Selector::parse("[data-testid='CoreTitle']").unwrap();
-
     let price_selector = Selector::parse(".fr-ec-price-text--color-promotional").unwrap();
     let original_price_selector = Selector::parse(".fr-ec-price__original-price").unwrap();
 
-    if let Some(name) = product_tile.select(&title_selector).next() {
-        println!("Name: {}", name.text().collect::<String>().trim());
-    }
+    let name = product_tile
+        .select(&title_selector)
+        .next()?
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_string();
 
-    if let Some(price) = product_tile.select(&price_selector).next() {
-        println!("Price: {}", price.text().collect::<String>().trim());
-    }
+    let price = product_tile
+        .select(&price_selector)
+        .next()?
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_string();
 
-    if let Some(original_price) = product_tile.select(&original_price_selector).next() {
-        println!(
-            "Original Price: {}",
-            original_price.text().collect::<String>().trim()
-        );
-    }
+    let original_price = product_tile
+        .select(&original_price_selector)
+        .next()?
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_string();
+
+    Some(SaleItem {
+        name,
+        price,
+        original_price,
+    })
 }

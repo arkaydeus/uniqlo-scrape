@@ -1,10 +1,11 @@
 [package]
-name = "uniqlo_scraper"
+name = "uniqlo-scraper"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-thirtyfour = "0.31.0"
 tokio = { version = "1.28.0", features = ["full"] }
-scraper = "0.13.0"
+thirtyfour = "0.31.0"
+scraper = "0.16.0"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
