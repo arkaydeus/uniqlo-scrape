@@ -14,15 +14,33 @@ struct SaleItem {
 
 #[get("/trousers")]
 async fn get_trousers() -> impl Responder {
-    match scrape_uniqlo().await {
-        Ok(sale_items) => {
-            let json_output = json!({ "sale_items": sale_items });
-            web::Json(json_output)
-        }
-        Err(e) => {
-            eprintln!("Error scraping Uniqlo: {:?}", e);
-            let json_output = json!({ "error": "Failed to scrape data" });
-            web::Json(json_output)
+    let mut attempt = 0;
+    let max_attempts = 3;
+
+    loop {
+        match scrape_uniqlo().await {
+            Ok(sale_items) => {
+                let json_output = json!({ "sale_items": sale_items });
+                return web::Json(json_output);
+            }
+            Err(e) => {
+                attempt += 1;
+                if attempt >= max_attempts {
+                    eprintln!(
+                        "Error scraping Uniqlo after {} attempts: {:?}",
+                        max_attempts, e
+                    );
+                    let json_output =
+                        json!({ "error": "Failed to scrape data after multiple attempts" });
+                    return web::Json(json_output);
+                }
+                let wait_time = attempt as u64;
+                eprintln!(
+                    "Error scraping Uniqlo (attempt {}): {:?}. Retrying in {} seconds...",
+                    attempt, e, wait_time
+                );
+                tokio::time::sleep(Duration::from_secs(wait_time)).await;
+            }
         }
     }
 }
